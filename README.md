@@ -10,7 +10,7 @@ To work around this problem, I created a powershell script that uses VMware.Powe
 sudo dnf install -y https://packages.microsoft.com/config/rhel/$majorver/packages-microsoft-prod.rpm
 
 # Install PowerShell
-sudo dnf install powershell -y
+sudo dnf install powershell-lts -y
 
 ```
 
