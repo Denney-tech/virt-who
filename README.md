@@ -6,11 +6,17 @@ To work around this problem, I created a powershell script that uses VMware.Powe
 # Requirements
 [reference](https://learn.microsoft.com/en-us/powershell/scripting/install/install-rhel?view=powershell-7.4)
 ``` bash
+# Unlock satellite packages
+satellite-maintain packages unlock
+
 # Register the Microsoft RedHat repository
 sudo dnf install -y https://packages.microsoft.com/config/rhel/$majorver/packages-microsoft-prod.rpm
 
 # Install PowerShell
 sudo dnf install powershell-lts -y
+
+# Lock satellite packages
+satellite-maintain packages lock
 
 ```
 
