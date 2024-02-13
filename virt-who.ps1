@@ -1,6 +1,6 @@
 #!/usr/bin/pwsh
 #Requires -Modules Microsoft.PowerShell.SecretManagement, Microsoft.PowerShell.SecretStore
-#Requires -Modules VMware.PowerCLI
+#Requires -Modules VMware.VimAutomation.Core
 
 
 $User = "svc_VC_RHEL"
