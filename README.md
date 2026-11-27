@@ -1,4 +1,10 @@
 # virt-who
+
+A PowerShell workaround that builds virt-who's host-to-guest mapping for VMware vCenter with VMware PowerCLI, then hands it to virt-who as a "fake" (file-based) backend. It was written for Red Hat Satellite at a time when hypervisors with duplicate BIOS UUIDs broke virt-who reporting.
+
+> **Status: archived, no longer maintained.** As far as I know, the Satellite / virt-who problem this worked around has since been fixed, so prefer a normal virt-who ESX configuration. This repository stays up for reference. See [Known issues](#known-issues) before reusing it.
+
+# Background
 I encountered a problem with Red Hat Satellite (aka TheForeman) where hypervisors in my vcenter had duplicate BIOS UUID's, which led to host-guest mapping failing succcessfully. Only a single host of any duplicate UUID was added to Satellite inventory, along with its respective guests mapping.  While there are workarounds for duplicate BIOS UUID's for subscribed VM's to Satellite, such as adding known bad UUID's to Settings > Content > Host Duplicate DMI UUIDs, none of them worked for virt-who hypervisors.
 
 To work around this problem, I created a powershell script that uses VMware.PowerCli to construct the same json that virt-who does, and save it to /etc/virt-who.d/virt-who.json.  I also backed up the virt-who config and replace it with a "fake" config that reads from the json file instead connecting to vcenter.
@@ -61,3 +67,20 @@ rhsm_prefix=/rhsm
 ```
 
 Lastly, save the virt-who.ps1 file somewhere in /root, chmod 700, and add it to root's crontab.
+
+# Known issues
+
+These are differences from what virt-who itself reports for ESX hosts, checked against [virt-who's source](https://github.com/candlepin/virt-who) as of November 2026 (`main` at `be7696b`, tag `virt-who-1.32.1-1`). Some of them may have matched virt-who when the script was written.
+
+- **The socket-count fact name doesn't match.** The script writes `cpu.cpusockets(s)`, but virt-who uses `cpu.cpu_socket(s)` (`Hypervisor.CPU_SOCKET_FACT`). Satellite may not see the hypervisors' socket counts, which matter for socket-based subscriptions. virt-who also sends the value as a string.
+- **Guest states use different values.** The script reports `1` for powered-on and `0` for everything else. virt-who uses libvirt's numbering for ESX: `1` running, `3` paused (suspended), `5` shut off, `0` unknown.
+- **The `active` attribute means something else.** The script sets it from the VM's connection state (`connected`). virt-who sets `active` to `1` when the guest is running or paused, and `0` otherwise, so a connected but powered-off VM differs.
+- **Only some guests are reported.** The script only includes VMs whose guest family is `linuxGuest`, while virt-who reports every VM that has a `config.uuid`. VMs without VMware Tools report no guest family, so they're skipped even when they run Linux.
+- **Hypervisor names are short names.** The script uses the short host name for both `name` and `uuid`. virt-who uses the host's FQDN from its DNS config, and its ID depends on the `hypervisor_id` setting. Switching back to real virt-who may therefore register the hosts again under new names.
+- **`dmi.system.uuid` comes from `esxcli` on purpose.** That was the point of the workaround. virt-who reports the hardware BIOS UUID (`hardware.systemInfo.uuid`) instead.
+- **Failures aren't handled.** If `Connect-VIServer` or `Get-Cluster` fails, the script still writes `/etc/virt-who.d/virt-who.json`, possibly with zero hypervisors, and virt-who reports that empty mapping. It also writes the file in place rather than to a temporary file that it then moves.
+- **Settings are hard-coded:** the vCenter server, account name and cluster names are in the script.
+
+# License
+
+[MIT](LICENSE). The script contains no virt-who code. It only produces the JSON format that virt-who's fake backend reads, and uses virt-who's own configuration. virt-who itself is GPL-2.0, and VMware PowerCLI is distributed under VMware's (Broadcom's) own terms. Both stay under their own licenses.
